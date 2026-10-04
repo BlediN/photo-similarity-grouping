@@ -24,6 +24,9 @@ Backend endpoints:
 - `POST /api/sessions/{id}/decisions`
 - `POST /api/sessions/{id}/delete-marked`
 
+Optional hardening:
+- Set `PHOTOMORPH_SCAN_ROOT=/path` to restrict scans to a trusted parent directory.
+
 ## Frontend
 
 ```bash

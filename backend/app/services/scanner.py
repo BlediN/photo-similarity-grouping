@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
+import os
+from pathlib import Path, PurePosixPath
 from typing import Iterable
 
 import numpy as np
@@ -27,9 +28,7 @@ class ImageFeatures:
 
 
 def discover_images(folder_path: str) -> list[str]:
-    root = Path(folder_path)
-    if not root.exists() or not root.is_dir():
-        raise ValueError(f"Invalid folder path: {folder_path}")
+    root = _resolve_scan_folder(folder_path)
 
     files = [
         str(path)
@@ -37,6 +36,37 @@ def discover_images(folder_path: str) -> list[str]:
         if path.is_file() and path.suffix.lower() in SUPPORTED_EXTENSIONS
     ]
     return sorted(files)
+
+
+def _resolve_scan_folder(folder_path: str) -> Path:
+    scan_root = Path(os.getenv("PHOTOMORPH_SCAN_ROOT", str(Path.cwd()))).expanduser().resolve()
+    root_normalized = str(scan_root).replace("\\", "/")
+    requested = folder_path.strip().replace("\\", "/")
+
+    if requested.startswith(root_normalized):
+        requested = requested[len(root_normalized) :]
+    requested = requested.lstrip("/")
+
+    pure_parts = [part for part in PurePosixPath(requested).parts if part not in ("", ".")]
+    if any(part == ".." for part in pure_parts):
+        raise ValueError(f"Folder path must be inside the allowed scan root: {scan_root}")
+
+    try:
+        candidate = scan_root.joinpath(*pure_parts).resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise ValueError(f"Invalid folder path: {folder_path}") from exc
+
+    if not candidate.is_dir():
+        raise ValueError(f"Invalid folder path: {folder_path}")
+
+    try:
+        candidate.relative_to(scan_root)
+    except ValueError as exc:
+        raise ValueError(
+            f"Folder path must be inside the allowed scan root: {scan_root}"
+        ) from exc
+
+    return candidate
 
 
 def _normalize(vec: np.ndarray) -> list[float]:

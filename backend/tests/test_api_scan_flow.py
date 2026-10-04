@@ -19,10 +19,11 @@ def _reset_db() -> None:
         db.close()
 
 
-def test_scan_history_decision_and_delete_flow(tmp_path: Path) -> None:
+def test_scan_history_decision_and_delete_flow(tmp_path: Path, monkeypatch) -> None:
     _reset_db()
     image_dir = tmp_path / "images"
     image_dir.mkdir()
+    monkeypatch.setenv("PHOTOMORPH_SCAN_ROOT", str(tmp_path))
 
     Image.new("RGB", (200, 200), color=(255, 0, 0)).save(image_dir / "a.jpg")
     Image.new("RGB", (200, 200), color=(254, 0, 0)).save(image_dir / "b.jpg")
